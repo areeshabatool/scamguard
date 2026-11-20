@@ -1,0 +1,7 @@
+anthropic
+pydantic>=2
+fastapi
+uvicorn
+pytest
+ruff
+-e .
