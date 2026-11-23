@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scam Guard</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --card: #1a1d24;
+        --muted: #8b93a7;
+        --line: #2a2f3a;
+        --text: #e8eaf0;
+        --benign: #2fa968;
+        --suspicious: #d9a441;
+        --scam: #e0514e;
+        --unsure: #6b7280;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 2rem 1rem;
+      }
+      main { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+      p.sub { color: var(--muted); margin: 0 0 1.5rem; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+      }
+      label { display: block; font-weight: 600; margin-bottom: .35rem; }
+      textarea, input[type="text"] {
+        width: 100%;
+        background: #11141a;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: .6rem .7rem;
+        font: inherit;
+      }
+      textarea { min-height: 110px; resize: vertical; }
+      .row { margin-bottom: 1rem; }
+      .hint { color: var(--muted); font-weight: 400; font-size: .85rem; }
+      button {
+        background: #3b82f6;
+        color: white;
+        border: 0;
+        border-radius: 8px;
+        padding: .6rem 1.2rem;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled { opacity: .6; cursor: default; }
+      .verdict {
+        display: inline-block;
+        padding: .2rem .7rem;
+        border-radius: 999px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-size: .8rem;
+      }
+      .verdict.benign { background: rgba(47,169,104,.18); color: var(--benign); }
+      .verdict.suspicious { background: rgba(217,164,65,.18); color: var(--suspicious); }
+      .verdict.scam { background: rgba(224,81,78,.2); color: var(--scam); }
+      .verdict.unsure { background: rgba(107,114,128,.25); color: #b6bcc9; }
+      .score { color: var(--muted); margin-left: .5rem; font-size: .85rem; }
+      h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 1.1rem 0 .4rem; }
+      ul.cues { margin: 0; padding-left: 1.1rem; }
+      ul.cues li { color: #f0c9c9; font-style: italic; }
+      .advice { background: #11141a; border-left: 3px solid #3b82f6; padding: .6rem .8rem; border-radius: 6px; }
+      table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+      th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
+      th { color: var(--muted); font-weight: 600; }
+      .status-ok { color: var(--benign); }
+      .status-skipped { color: var(--muted); }
+      .status-error { color: var(--scam); }
+      .hidden { display: none; }
+      .err { color: var(--scam); }
+      footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Scam Guard</h1>
+      <p class="sub">Paste a forwarded message or upload a screenshot. Nothing you send is stored.</p>
+
+      <form id="form" class="card">
+        <div class="row">
+          <label for="text">Message text <span class="hint">(English, Roman Urdu or Urdu)</span></label>
+          <textarea id="text" name="text" placeholder="Paste the message here..."></textarea>
+        </div>
+        <div class="row">
+          <label for="image">Or upload a screenshot</label>
+          <input type="file" id="image" name="image" accept="image/*" />
+        </div>
+        <div class="row">
+          <label for="session_id">Session id <span class="hint">(optional, for a multi-turn chat)</span></label>
+          <input type="text" id="session_id" name="session_id" placeholder="e.g. my-chat-1" />
+        </div>
+        <button type="submit" id="submit">Analyze</button>
+      </form>
+
+      <section id="result" class="card hidden" aria-live="polite">
+        <div>
+          <span id="verdict" class="verdict"></span>
+          <span id="score" class="score"></span>
+        </div>
+
+        <div id="cues-wrap">
+          <h2>Quoted cues</h2>
+          <ul id="cues" class="cues"></ul>
+        </div>
+
+        <h2>Advice</h2>
+        <div id="advice" class="advice"></div>
+
+        <h2>Step trace</h2>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Step</th><th>Status</th><th>Detail</th></tr>
+          </thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </section>
+
+      <p id="error" class="err hidden"></p>
+      <footer>Defensive tool &middot; message content is never logged or stored</footer>
+    </main>
+
+    <script>
+      const form = document.getElementById("form");
+      const submitBtn = document.getElementById("submit");
+      const resultEl = document.getElementById("result");
+      const errorEl = document.getElementById("error");
+
+      function text(el, value) {
+        const node = document.getElementById(el);
+        node.textContent = value;
+        return node;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.classList.add("hidden");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Analyzing...";
+        try {
+          const data = new FormData(form);
+          // Drop empty fields so the server sees "text or image", not blanks.
+          if (!data.get("text")) data.delete("text");
+          const file = data.get("image");
+          if (!file || !file.name) data.delete("image");
+          if (!data.get("session_id")) data.delete("session_id");
+
+          const resp = await fetch("/analyze", { method: "POST", body: data });
+          if (!resp.ok) {
+            const detail = await resp.json().catch(() => ({}));
+            throw new Error(detail.detail || `Request failed (${resp.status})`);
+          }
+          render(await resp.json());
+        } catch (err) {
+          resultEl.classList.add("hidden");
+          errorEl.textContent = err.message;
+          errorEl.classList.remove("hidden");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Analyze";
+        }
+      });
+
+      function render(r) {
+        const verdict = text("verdict", r.decision);
+        verdict.className = "verdict " + r.decision;
+        text("score", `score ${Number(r.score).toFixed(2)}`);
+
+        const cuesWrap = document.getElementById("cues-wrap");
+        const cues = document.getElementById("cues");
+        cues.innerHTML = "";
+        if (r.cues && r.cues.length) {
+          cuesWrap.classList.remove("hidden");
+          for (const c of r.cues) {
+            const li = document.createElement("li");
+            li.textContent = `“${c}”`;
+            cues.appendChild(li);
+          }
+        } else {
+          cuesWrap.classList.add("hidden");
+        }
+
+        text("advice", r.advice || "—");
+
+        const trace = document.getElementById("trace");
+        trace.innerHTML = "";
+        for (const step of r.trace || []) {
+          const tr = document.createElement("tr");
+          const cells = [step.step, step.name, step.status, step.detail || ""];
+          cells.forEach((v, i) => {
+            const td = document.createElement("td");
+            td.textContent = v;
+            if (i === 2) td.className = "status-" + step.status;
+            tr.appendChild(td);
+          });
+          trace.appendChild(tr);
+        }
+        resultEl.classList.remove("hidden");
+      }
+    </script>
+  </body>
+</html>

@@ -22,6 +22,17 @@ extend-exclude = ["starter"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI uses calls (Form/File/Depends/...) as argument defaults by design; not B008.
+extend-immutable-calls = [
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Body",
+    "fastapi.Path",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

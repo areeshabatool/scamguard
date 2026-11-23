@@ -1,7 +1,10 @@
 anthropic
+tenacity
 pydantic>=2
 fastapi
 uvicorn
+python-multipart
 pytest
+hypothesis
 ruff
 -e .
