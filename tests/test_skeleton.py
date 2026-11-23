@@ -7,6 +7,7 @@ import pytest
 MODULES = [
     "scamguard",
     "scamguard.config",
+    "scamguard.schemas",
     "scamguard.llm",
     "scamguard.ocr",
     "scamguard.sanitizer",
