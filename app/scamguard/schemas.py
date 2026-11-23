@@ -38,3 +38,27 @@ class SanitizedMessage(_Strict):
     removed_chars: int = Field(ge=0)
     neutralized_tags: int = Field(ge=0)
     ai_address_markers: list[str] = Field(default_factory=list)
+
+
+class UrlFinding(_Strict):
+    """One parsed URL and what the verifier found wrong with it (never fetched)."""
+
+    url: str
+    host: str | None = None
+    registrable_domain: str | None = None
+    official: bool = False
+    flags: list[str] = Field(default_factory=list)
+    score: float = Field(ge=0.0, le=1.0, default=0.0)
+
+
+class ToolReport(_Strict):
+    """Step 5 output: deterministic URL and phone checks and the tool risk score.
+
+    tool_score is the max severity across findings; code risk can only raise the
+    final risk, never lower it (invariant 3).
+    """
+
+    tool_score: float = Field(ge=0.0, le=1.0, default=0.0)
+    urls: list[UrlFinding] = Field(default_factory=list)
+    phone_numbers: list[str] = Field(default_factory=list)
+    flags: list[str] = Field(default_factory=list)

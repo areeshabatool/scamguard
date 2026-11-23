@@ -1,3 +1,18 @@
 {
-  "domains": []
+  "_comment": "Allowlist of official registrable domains (invariant 4). Brand names live only here, never in scam fixtures. Extend as needed.",
+  "domains": [
+    "hbl.com",
+    "ubldigital.com",
+    "meezanbank.com",
+    "bankalfalah.com",
+    "mcb.com.pk",
+    "easypaisa.com.pk",
+    "jazzcash.com.pk",
+    "telenor.com.pk",
+    "jazz.com.pk",
+    "zong.com.pk",
+    "nadra.gov.pk",
+    "fbr.gov.pk",
+    "pta.gov.pk"
+  ]
 }
