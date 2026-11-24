@@ -12,53 +12,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 from pathlib import Path
 from statistics import fmean
 
 from eval import metrics
+from eval.common import BOOTSTRAP_SEED, RESULTS_DIR, SAMPLES_DIR, dry_fake, git_commit, read_jsonl
 from eval.systems import B0, B1, B2, B3
 from scamguard import config
-from scamguard.llm import LLM, FakeLLM
 
-BOOTSTRAP_SEED = 1234
-DEFAULT_DATASET = config.DATA_DIR / "samples" / "eval.jsonl"
-RESULTS_DIR = config.REPO_ROOT / "results"
+DEFAULT_DATASET = SAMPLES_DIR / "eval.jsonl"
+read_dataset = read_jsonl
+_git_commit = git_commit
+_dry_fake = dry_fake
 
-
-def read_dataset(path: Path) -> list[dict]:
-    rows: list[dict] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line:
-            rows.append(json.loads(line))
-    return rows
-
-
-def _git_commit() -> str:
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=config.REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return out.stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
-
-
-def _dry_fake() -> LLM:
-    """A scripted FakeLLM used for --dry-run: no network, deterministic plumbing check."""
-    return FakeLLM(
-        by_tool={
-            "submit_verdict": {"verdict": "scam", "scam_score": 0.9, "cues": []},
-            "submit_facts": {"urls": [], "phone_numbers": []},
-            "give_advice": {"action_ids": ["do_not_click"], "message": "Click na karein."},
-        },
-        turns=[[("submit_verdict", {"verdict": "scam", "scam_score": 0.9})]],
-    )
+__all__ = ["BOOTSTRAP_SEED", "DEFAULT_DATASET", "RESULTS_DIR", "main", "read_dataset", "run"]
 
 
 def evaluate(system, dataset: list[dict], *, n_resamples: int) -> tuple[dict, list[str]]:

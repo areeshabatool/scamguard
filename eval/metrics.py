@@ -107,3 +107,45 @@ def paired_difference(
         "ci_low": _percentile(diffs, alpha / 2),
         "ci_high": _percentile(diffs, 1 - alpha / 2),
     }
+
+
+def mean_or_nan(values: Sequence[float]) -> float:
+    return sum(values) / len(values) if values else float("nan")
+
+
+def bootstrap_mean_ci(
+    values: Sequence[float],
+    *,
+    seed: int,
+    n_resamples: int = 1000,
+    alpha: float = 0.05,
+) -> tuple[float, float]:
+    """Percentile bootstrap CI for the mean of per-unit values.
+
+    Units are resampled with replacement: 0/1 outcomes give a CI for a rate, and paired
+    differences (one value per pair) give a CI for a paired difference. Empty -> NaN.
+    """
+    n = len(values)
+    if n == 0:
+        return float("nan"), float("nan")
+    rng = random.Random(seed)
+    stats = sorted(sum(values[rng.randrange(n)] for _ in range(n)) / n for _ in range(n_resamples))
+    return _percentile(stats, alpha / 2), _percentile(stats, 1 - alpha / 2)
+
+
+def spread(values: Sequence[float]) -> dict[str, float]:
+    """Mean and spread of a statistic across repeated runs (e.g. calibration splits)."""
+    if not values:
+        nan = float("nan")
+        return {"mean": nan, "std": nan, "p2_5": nan, "p97_5": nan, "min": nan, "max": nan}
+    ordered = sorted(values)
+    mean = sum(ordered) / len(ordered)
+    var = sum((v - mean) ** 2 for v in ordered) / (len(ordered) - 1) if len(ordered) > 1 else 0.0
+    return {
+        "mean": mean,
+        "std": var**0.5,
+        "p2_5": _percentile(ordered, 0.025),
+        "p97_5": _percentile(ordered, 0.975),
+        "min": ordered[0],
+        "max": ordered[-1],
+    }

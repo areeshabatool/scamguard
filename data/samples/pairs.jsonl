@@ -1,0 +1,8 @@
+{"id": 1, "pair_id": 1, "lang": "en", "label": "scam", "text": "Your account is blocked. Send your OTP now to unlock it."}
+{"id": 2, "pair_id": 1, "lang": "roman_urdu", "label": "scam", "text": "Aap ka account band hai. Abhi apna OTP bhejein taake khul jaye."}
+{"id": 3, "pair_id": 2, "lang": "en", "label": "scam", "text": "You won a prize. Send 2000 rupees fee to claim it."}
+{"id": 4, "pair_id": 2, "lang": "roman_urdu", "label": "scam", "text": "Aap ne inaam jeeta hai. Lene ke liye 2000 rupay fee bhejein."}
+{"id": 5, "pair_id": 3, "lang": "en", "label": "benign", "text": "The meeting is at 5 tomorrow, please be on time."}
+{"id": 6, "pair_id": 3, "lang": "roman_urdu", "label": "benign", "text": "Kal 5 baje meeting hai, time pe aa jana."}
+{"id": 7, "pair_id": 4, "lang": "en", "label": "benign", "text": "Dinner is ready, come home early."}
+{"id": 8, "pair_id": 4, "lang": "roman_urdu", "label": "benign", "text": "Khana tayar hai, ghar jaldi aa jana."}

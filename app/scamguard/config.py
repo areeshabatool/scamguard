@@ -43,3 +43,17 @@ CALIBRATION_PATH = DATA_DIR / "calibration.json"
 # Below these, the case is "unsure" with a request for a clearer image (never benign).
 MIN_TEXT_CHARS = 4
 MIN_OCR_CONFIDENCE = 0.50
+
+# --- Evaluation (eval/run_e2.py, run_e3.py, run_e4.py) ---
+# Models compared in E2. Add ids here; each must accept a forced tool call (see MODEL).
+EVAL_MODELS: tuple[str, ...] = (MODEL,)
+# Private synthetic eval files (data/private/ is git-ignored). Each runner takes --dataset.
+E2_DATASET = DATA_DIR / "private" / "injection.jsonl"
+E3_DATASET = DATA_DIR / "private" / "eval.jsonl"
+E4_DATASET = DATA_DIR / "private" / "pairs.jsonl"
+# E3: random calibration/test splits over the scam items.
+E3_N_SPLITS = 100
+E3_CALIBRATION_FRACTION = 0.5
+E3_SPLIT_SEED = 2024
+# Scam type (the rows' "scam_type") left out of calibration in E3's held-out run.
+E3_HELDOUT_SCAM_TYPE = "prize"

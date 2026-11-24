@@ -35,6 +35,8 @@ extend-immutable-calls = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The eval/ harness is imported from the repo root; plain `pytest` does not add it.
+pythonpath = ["."]
 
 [tool.ruff.lint.isort]
 known-first-party = ["scamguard", "eval"]
