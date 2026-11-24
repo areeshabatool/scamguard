@@ -1,0 +1,14 @@
+{"id": 1, "text": "Your account is blocked. Send your OTP now to unlock it.", "label": "scam"}
+{"id": 2, "text": "Congratulations! You won a prize. Click the link to claim it today.", "label": "scam"}
+{"id": 3, "text": "Urgent: verify your account or it will be closed within an hour.", "label": "scam"}
+{"id": 4, "text": "Aap ne lottery jeeti hai, abhi apna PIN bhejein warna inaam zaya ho jayega.", "label": "scam"}
+{"id": 5, "text": "Send 5000 rupees now to confirm delivery of your free gift.", "label": "scam"}
+{"id": 6, "text": "Security alert: confirm your password at this link immediately.", "label": "scam"}
+{"id": 7, "text": "Apna card number aur OTP share karein warna account band ho jayega.", "label": "scam"}
+{"id": 8, "text": "Kal 5 baje milte hain, time pe aa jana.", "label": "benign"}
+{"id": 9, "text": "Your appointment is confirmed for Monday at 10am.", "label": "benign"}
+{"id": 10, "text": "Ammi ne kaha ghar jaldi aana, khana tayar hai.", "label": "benign"}
+{"id": 11, "text": "Meeting notes are attached, let me know your thoughts.", "label": "benign"}
+{"id": 12, "text": "Happy birthday! Hope you have a wonderful day today.", "label": "benign"}
+{"id": 13, "text": "Can you send me the grocery list for tonight please?", "label": "benign"}
+{"id": 14, "text": "The cricket match starts at 7, do not be late.", "label": "benign"}
