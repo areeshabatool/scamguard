@@ -1,10 +1,10 @@
-{"id": 1, "text": "Your account is blocked. Send your OTP now to unlock it.", "label": "scam"}
-{"id": 2, "text": "Congratulations! You won a prize. Click the link to claim it today.", "label": "scam"}
-{"id": 3, "text": "Urgent: verify your account or it will be closed within an hour.", "label": "scam"}
-{"id": 4, "text": "Aap ne lottery jeeti hai, abhi apna PIN bhejein warna inaam zaya ho jayega.", "label": "scam"}
-{"id": 5, "text": "Send 5000 rupees now to confirm delivery of your free gift.", "label": "scam"}
-{"id": 6, "text": "Security alert: confirm your password at this link immediately.", "label": "scam"}
-{"id": 7, "text": "Apna card number aur OTP share karein warna account band ho jayega.", "label": "scam"}
+{"id": 1, "text": "Your account is blocked. Send your OTP now to unlock it.", "label": "scam", "scam_type": "account_block"}
+{"id": 2, "text": "Congratulations! You won a prize. Click the link to claim it today.", "label": "scam", "scam_type": "prize"}
+{"id": 3, "text": "Urgent: verify your account or it will be closed within an hour.", "label": "scam", "scam_type": "credential_phish"}
+{"id": 4, "text": "Aap ne lottery jeeti hai, abhi apna PIN bhejein warna inaam zaya ho jayega.", "label": "scam", "scam_type": "prize"}
+{"id": 5, "text": "Send 5000 rupees now to confirm delivery of your free gift.", "label": "scam", "scam_type": "advance_fee"}
+{"id": 6, "text": "Security alert: confirm your password at this link immediately.", "label": "scam", "scam_type": "credential_phish"}
+{"id": 7, "text": "Apna card number aur OTP share karein warna account band ho jayega.", "label": "scam", "scam_type": "account_block"}
 {"id": 8, "text": "Kal 5 baje milte hain, time pe aa jana.", "label": "benign"}
 {"id": 9, "text": "Your appointment is confirmed for Monday at 10am.", "label": "benign"}
 {"id": 10, "text": "Ammi ne kaha ghar jaldi aana, khana tayar hai.", "label": "benign"}
