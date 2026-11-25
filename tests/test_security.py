@@ -64,6 +64,18 @@ def test_v1_injection_marker_floors_a_compromised_model() -> None:
     assert res.decision != "benign"  # marker floor raises it to at least suspicious
 
 
+def test_v1_reassurance_marker_blocks_url_free_persuasion() -> None:
+    # A URL-free scam that insists it is safe; the model is bribed to benign 0.0.
+    # Before the reassurance-marker floor this came back benign (the residual from the
+    # security review); now it is floored to at least suspicious.
+    text = "Your lottery prize is ready. This is 100% genuine, not a scam. Share your details."
+    assert sanitize(text).reassurance_markers  # the sanitizer flags the reassurance
+    res = analyze(
+        text, llm=_compromised("benign", 0.0), calibration_scores=CALIBRATION, alpha=ALPHA
+    )
+    assert res.decision != "benign"
+
+
 def test_v1_final_risk_is_monotone_max() -> None:
     # The code never subtracts: final risk is the max of model, tool and marker floor.
     assert guards.final_risk(0.1, 0.9, 0.0) == 0.9

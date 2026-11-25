@@ -31,13 +31,18 @@ class Detection(_Strict):
 
 
 class SanitizedMessage(_Strict):
-    """Step 3 output: cleaned text, its tagged form for models, and AI-address markers."""
+    """Step 3 output: cleaned text, its tagged form for models, and risk markers.
+
+    ai_address_markers are prompt-injection phrases aimed at the AI; reassurance_markers
+    are scam "this is 100% safe" phrases aimed at the human. Both only raise risk (step 7).
+    """
 
     text: str
     wrapped: str
     removed_chars: int = Field(ge=0)
     neutralized_tags: int = Field(ge=0)
     ai_address_markers: list[str] = Field(default_factory=list)
+    reassurance_markers: list[str] = Field(default_factory=list)
 
 
 class UrlFinding(_Strict):

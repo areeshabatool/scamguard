@@ -16,3 +16,6 @@ __pycache__/
 # Never commit private data or raw run outputs
 data/private/
 results/raw/
+
+# Dry-run evaluation smoke outputs
+results/*_dryrun.json

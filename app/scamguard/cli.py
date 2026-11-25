@@ -10,10 +10,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 
 from scamguard import config
 from scamguard.llm import LLM
 from scamguard.pipeline import analyze
+
+_NO_KEY_MESSAGE = (
+    "error: no Anthropic credentials found. Copy .env.example to .env and set "
+    "ANTHROPIC_API_KEY (or export it), then retry. Tests and the eval --dry-run need no key."
+)
 
 
 def _load_calibration() -> list[float]:
@@ -41,6 +48,11 @@ def main(argv: list[str] | None = None, *, llm: LLM | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "analyze":
+        if llm is None and not (
+            os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        ):
+            print(_NO_KEY_MESSAGE, file=sys.stderr)
+            return 1
         client = llm if llm is not None else _build_llm()
         result = analyze(args.text, llm=client, calibration_scores=_load_calibration())
         if args.json:
