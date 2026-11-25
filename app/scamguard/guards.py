@@ -55,7 +55,8 @@ def assess(
 ) -> Assessment:
     """Combine the model verdict with the code checks into a final Assessment."""
     cues = filter_cues(detection.cues, sanitized.text)
-    marker_floor = config.MARKER_RISK_FLOOR if sanitized.ai_address_markers else 0.0
+    markers = list(sanitized.ai_address_markers) + list(sanitized.reassurance_markers)
+    marker_floor = config.MARKER_RISK_FLOOR if markers else 0.0
     score = final_risk(detection.scam_score, tool_report.tool_score, marker_floor)
     band = band_verdict(score)
     verdict = raise_only(detection.verdict, band)
@@ -65,5 +66,5 @@ def assess(
         model_verdict=detection.verdict,
         band_verdict=band,
         cues=cues,
-        markers=list(sanitized.ai_address_markers),
+        markers=markers,
     )

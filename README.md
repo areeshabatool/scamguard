@@ -84,6 +84,9 @@ uvicorn scamguard.api:app --reload
 ```
 
 `GET /health` and the upload page need no key; `POST /analyze` makes a live model call.
+Screenshot OCR is pluggable (no engine is bundled); an optional Tesseract adapter is in
+[`app/scamguard/ocr.py`](app/scamguard/ocr.py) (`tesseract_engine`) — install `pytesseract`
+and the system `tesseract` binary and set `app.state.ocr_engine = tesseract_engine`.
 
 **No API key?** Reproduce the whole system offline with the dry-run evaluation below — it
 exercises the full pipeline on the sample data using a deterministic fake model.
@@ -119,6 +122,16 @@ reads the committed samples in [`data/samples/`](data/samples/).
 - **B2** a hardened prompt (message wrapped as untrusted data)
 - **B3** the full Scam Guard pipeline
 
+### Calibration
+
+The gate needs scam scores to set its release threshold. Build `data/calibration.json`
+(without it, benign is never released — every otherwise-benign message returns `unsure`):
+
+```bash
+python -m eval.calibrate --dataset <scams.jsonl>   # live
+python -m eval.calibrate --dry-run                 # offline smoke
+```
+
 ### Failure attribution (optional)
 
 Given a gold-annotated dataset (`gold_urls`, `gold_requests`, `gold_authority_claim`),
@@ -136,8 +149,11 @@ data/            official_domains.json allowlist; samples/ (synthetic eval data)
 eval/            metrics, baselines (systems.py), experiment runners (run_e1..e4, run_eval)
 tests/           offline tests (FakeLLM only; never call the API)
 results/         evaluation tables (results/raw/ is git-ignored)
-docs/
+docs/            threat-model.md, evaluation.md
 ```
+
+See [docs/threat-model.md](docs/threat-model.md) for the invariants and attacker model,
+and [docs/evaluation.md](docs/evaluation.md) for the evaluation methodology.
 
 ## Commands reference
 

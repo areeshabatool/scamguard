@@ -37,3 +37,13 @@ def test_cli_analyze_json(capsys: pytest.CaptureFixture[str]) -> None:
 def test_cli_requires_subcommand() -> None:
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+def test_cli_without_key_prints_friendly_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    code = cli.main(["analyze", "a long enough message to analyze"])  # no injected llm, no key
+    assert code == 1
+    assert "ANTHROPIC_API_KEY" in capsys.readouterr().err

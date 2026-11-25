@@ -43,6 +43,23 @@ _AI_ADDRESS_PATTERNS = [
 ]
 _AI_ADDRESS = re.compile("|".join(f"(?:{p})" for p in _AI_ADDRESS_PATTERNS), re.IGNORECASE)
 
+# Scam "trust me, this is safe" phrases aimed at the human reader. Kept deliberately
+# specific so ordinary benign messages (which rarely insist they are "100% genuine") do
+# not match. Like AI-address markers, these can only raise risk, never lower it.
+_REASSURANCE_PATTERNS = [
+    # English
+    r"100\s*%\s*(?:safe|legit\w*|genuine|real|secure)",
+    r"(?:this|it)\s+is\s+(?:definitely\s+)?not\s+a\s+(?:scam|fraud)",
+    r"(?:totally|completely|absolutely)\s+(?:safe|legit\w*|genuine)",
+    r"(?:guaranteed|100\s*%\s*guaranteed)\s+(?:genuine|real|safe|legit\w*)",
+    r"this\s+is\s+(?:a\s+)?(?:real|genuine|official)\s+(?:offer|message|prize)",
+    # Roman Urdu
+    r"(?:bilkul|100\s*%)\s*(?:safe|mehfooz|theek|asli)",
+    r"(?:koi|koyi|ye|yeh)\s+(?:scam|fraud|dhoka)\s+(?:nahi|nahin)\s*(?:hai)?",
+    r"(?:yeh|ye)\s+(?:bilkul\s+)?(?:asli|genuine|sacha)\s+(?:hai|offer)",
+]
+_REASSURANCE = re.compile("|".join(f"(?:{p})" for p in _REASSURANCE_PATTERNS), re.IGNORECASE)
+
 
 def _is_hidden(ch: str) -> bool:
     if ch in _KEEP:
@@ -87,6 +104,11 @@ def find_ai_address(text: str) -> list[str]:
     return [m.group(0) for m in _AI_ADDRESS.finditer(text)]
 
 
+def find_reassurance(text: str) -> list[str]:
+    """Return scam "this is 100% safe/genuine" phrases, as exact substrings."""
+    return [m.group(0) for m in _REASSURANCE.finditer(text)]
+
+
 def sanitize(raw: str) -> SanitizedMessage:
     """Run the full step 3 on raw message text."""
     text, removed = _clean_counted(raw)
@@ -97,4 +119,5 @@ def sanitize(raw: str) -> SanitizedMessage:
         removed_chars=removed,
         neutralized_tags=count,
         ai_address_markers=find_ai_address(text),
+        reassurance_markers=find_reassurance(text),
     )
