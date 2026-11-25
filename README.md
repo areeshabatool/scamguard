@@ -76,6 +76,9 @@ python -m scamguard.cli analyze "Your account is blocked. Send your OTP now to u
 # add --json for the full result with the per-step trace
 ```
 
+For a presentation, `python -m scamguard.cli demo` runs three canned scenarios in a row —
+a clear scam, a blurry screenshot (incomplete input → unsure), and an injection attempt.
+
 Or run the web UI and open <http://127.0.0.1:8000> to paste a message or upload a
 screenshot:
 

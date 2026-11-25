@@ -47,3 +47,20 @@ def test_cli_without_key_prints_friendly_error(
     code = cli.main(["analyze", "a long enough message to analyze"])  # no injected llm, no key
     assert code == 1
     assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
+
+
+def test_cli_demo_runs_three_scenarios(capsys: pytest.CaptureFixture[str]) -> None:
+    fake = FakeLLM(
+        by_tool={
+            "submit_facts": {"urls": [], "phone_numbers": []},
+            "give_advice": {"action_ids": ["do_not_click"], "message": "Click na karein."},
+        },
+        turns=[[("submit_verdict", {"verdict": "scam", "scam_score": 0.9})]] * 2,
+    )
+    code = cli.main(["demo"], llm=fake)
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "1. Clear scam" in out
+    assert "2. Incomplete input" in out
+    assert "3. Injection attempt" in out
+    assert out.count("decision:") == 3

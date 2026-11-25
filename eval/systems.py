@@ -26,6 +26,22 @@ from scamguard.sanitizer import sanitize
 from scamguard.schemas import Detection
 
 LLMFactory = Callable[[], LLM]
+_FLAGGED = frozenset({"scam", "suspicious"})
+
+
+def turns_to_detection(system: Any, turns: Sequence[str]) -> int | None:
+    """Feed a multi-turn chat one turn at a time (cumulative) and return the 1-based turn
+    at which the system first flags it (scam/suspicious), or None if it never does.
+
+    The conversation so far is joined and re-read each turn, matching how a forwarded chat
+    screenshot grows; it needs no hidden model state.
+    """
+    history: list[str] = []
+    for index, turn in enumerate(turns, start=1):
+        history.append(turn)
+        if system.predict("\n".join(history)).label in _FLAGGED:
+            return index
+    return None
 
 
 @dataclass(frozen=True)

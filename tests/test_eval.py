@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from eval import run_e1
-from eval.systems import B0, B1, B2, B3
+from eval.systems import B0, B1, B2, B3, turns_to_detection
 from scamguard.llm import FakeLLM
 
 
@@ -20,6 +20,15 @@ def test_b0_flags_keywords_without_a_model() -> None:
     assert b0.predict("Send your OTP now").label == "scam"
     assert b0.predict("Kal milte hain").label == "benign"
     assert b0.predict("anything").turns == 0  # no model calls
+
+
+def test_turns_to_detection_flags_at_the_scam_turn() -> None:
+    convo = ["Hi beta kaise ho", "Sab theek hai?", "Send your OTP now to unlock account"]
+    assert turns_to_detection(B0(), convo) == 3  # B0 flags once the OTP ask appears
+
+
+def test_turns_to_detection_none_for_a_benign_chat() -> None:
+    assert turns_to_detection(B0(), ["Kal milte hain", "Theek hai", "Chai peenge"]) is None
 
 
 def test_b1_maps_model_verdict() -> None:
