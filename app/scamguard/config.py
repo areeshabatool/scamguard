@@ -35,7 +35,8 @@ MARKER_RISK_FLOOR = SUSPICIOUS_BAND
 
 # --- Conformal gate (step 8) ---
 # Miss-rate budget for releasing "benign". k = floor(ALPHA * (n + 1)).
-ALPHA = 0.10
+# 0.05 is the proposed O3 target (5% miss rate); revisit after the baselines are measured.
+ALPHA = 0.05
 # Optional calibration set of scam scores for the gate (a JSON list). Absent is fine.
 CALIBRATION_PATH = DATA_DIR / "calibration.json"
 
@@ -45,8 +46,9 @@ MIN_TEXT_CHARS = 4
 MIN_OCR_CONFIDENCE = 0.50
 
 # --- Evaluation (eval/run_e2.py, run_e3.py, run_e4.py) ---
-# Models compared in E2. Add ids here; each must accept a forced tool call (see MODEL).
-EVAL_MODELS: tuple[str, ...] = (MODEL,)
+# Models compared in E2 (ASR across two models, per the proposal). Each must accept a
+# forced tool call (see MODEL); the newest models (Opus 5.5, Sonnet 5.5, Fable 5.x) do not.
+EVAL_MODELS: tuple[str, ...] = (MODEL, "claude-haiku-4-5")
 # Private synthetic eval files (data/private/ is git-ignored). Each runner takes --dataset.
 E2_DATASET = DATA_DIR / "private" / "injection.jsonl"
 E3_DATASET = DATA_DIR / "private" / "eval.jsonl"
