@@ -1,4 +1,5 @@
 anthropic
+openai        # optional GPT-4o-mini backend (opt-in; Claude is the default)
 tenacity
 pydantic>=2
 fastapi

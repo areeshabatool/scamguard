@@ -44,6 +44,7 @@ def test_cli_without_key_prints_friendly_error(
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     code = cli.main(["analyze", "a long enough message to analyze"])  # no injected llm, no key
     assert code == 1
     assert "ANTHROPIC_API_KEY" in capsys.readouterr().err

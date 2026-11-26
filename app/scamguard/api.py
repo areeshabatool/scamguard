@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from scamguard import config
 from scamguard.llm import LLM
@@ -33,9 +34,9 @@ _WEB_INDEX = config.REPO_ROOT / "web" / "index.html"
 def _get_llm() -> LLM:
     llm = getattr(app.state, "llm", None)
     if llm is None:
-        from scamguard.llm import AnthropicLLM
+        from scamguard.llm import build_default_llm
 
-        llm = AnthropicLLM()
+        llm = build_default_llm()
         app.state.llm = llm
     return llm
 
@@ -85,3 +86,10 @@ async def analyze_endpoint(
         return session.analyze(text_in, ocr=ocr_result)
 
     return analyze(text_in, ocr=ocr_result, llm=llm, calibration_scores=_calibration())
+
+
+# Serve the cinematic front end (static files only) at /cinematic. Display-only: it calls
+# the same /analyze endpoint and never touches the pipeline, guards, gate or eval code.
+_CINEMATIC_DIR = config.REPO_ROOT / "web" / "cinematic"
+if _CINEMATIC_DIR.is_dir():
+    app.mount("/cinematic", StaticFiles(directory=str(_CINEMATIC_DIR), html=True), name="cinematic")

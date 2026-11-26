@@ -359,6 +359,344 @@ class AnthropicLLM:
 
 
 # ---------------------------------------------------------------------------
+# Optional OpenAI backend (opt-in; Claude stays the default)
+# ---------------------------------------------------------------------------
+
+
+def _tool_to_openai(tool: Tool) -> JsonObj:
+    """Anthropic tool {name, description, input_schema} -> OpenAI function tool."""
+    return {
+        "type": "function",
+        "function": {
+            "name": str(tool["name"]),
+            "description": str(tool.get("description", "")),
+            "parameters": tool.get("input_schema", {"type": "object", "properties": {}}),
+        },
+    }
+
+
+def _tool_choice_to_openai(choice: ToolChoice) -> Any:
+    if isinstance(choice, str):
+        return {"auto": "auto", "any": "required", "none": "none"}.get(choice, "auto")
+    if isinstance(choice, Mapping) and choice.get("type") == "tool":
+        return {"type": "function", "function": {"name": choice["name"]}}
+    return "auto"
+
+
+def _loads_args(raw: Any) -> JsonObj:
+    if isinstance(raw, dict):
+        return raw
+    try:
+        value = json.loads(raw or "{}")
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _assistant_to_openai(content: Any) -> JsonObj:
+    """An echoed assistant turn (string or Anthropic-style blocks) -> OpenAI message."""
+    if isinstance(content, str):
+        return {"role": "assistant", "content": content}
+    text_parts: list[str] = []
+    tool_calls: list[JsonObj] = []
+    for block in content or []:
+        btype = block.get("type") if isinstance(block, Mapping) else getattr(block, "type", None)
+        if btype == "text":
+            text_parts.append(
+                block.get("text", "") if isinstance(block, Mapping) else getattr(block, "text", "")
+            )
+        elif btype == "tool_use":
+            bid = block["id"] if isinstance(block, Mapping) else block.id
+            bname = block["name"] if isinstance(block, Mapping) else block.name
+            binput = block["input"] if isinstance(block, Mapping) else block.input
+            tool_calls.append(
+                {
+                    "id": bid,
+                    "type": "function",
+                    "function": {"name": bname, "arguments": json.dumps(dict(binput))},
+                }
+            )
+    msg: JsonObj = {"role": "assistant"}
+    text = "".join(text_parts)
+    if tool_calls:
+        msg["tool_calls"] = tool_calls
+        msg["content"] = text or None
+    else:
+        msg["content"] = text or ""
+    return msg
+
+
+def _messages_to_openai(system: str, messages: list[JsonObj]) -> list[JsonObj]:
+    """Convert Anthropic-style messages (as the pipeline builds them) to OpenAI chat form."""
+    out: list[JsonObj] = [{"role": "system", "content": system}]
+    for m in messages:
+        role, content = m["role"], m["content"]
+        if role == "assistant":
+            out.append(_assistant_to_openai(content))
+        elif isinstance(content, str):
+            out.append({"role": "user", "content": content})
+        else:  # a user turn carrying tool_result blocks
+            for block in content:
+                if not isinstance(block, Mapping):
+                    continue
+                if block.get("type") == "tool_result":
+                    out.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": block["tool_use_id"],
+                            "content": str(block.get("content", "")),
+                        }
+                    )
+                elif block.get("type") == "text":
+                    out.append({"role": "user", "content": str(block.get("text", ""))})
+    return out
+
+
+class OpenAILLM:
+    """Forces tool calls through the OpenAI Chat Completions API (opt-in backend).
+
+    Same interface as AnthropicLLM. GPT-4o-mini accepts forced function calls, so the
+    structured-output contract the pipeline relies on is preserved; nothing downstream
+    changes. call_tool results are cached on disk; the stateful run_turn loop is not.
+    """
+
+    def __init__(
+        self,
+        *,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        cache_dir: Path | None = None,
+        client: Any | None = None,
+    ) -> None:
+        self.model = model or config.OPENAI_MODEL
+        self.max_tokens = max_tokens or config.MAX_TOKENS
+        self.cache_dir = cache_dir if cache_dir is not None else config.LLM_CACHE_DIR
+        self._client = client
+
+    @property
+    def client(self) -> Any:
+        if self._client is None:
+            import openai  # imported lazily so importing llm.py needs no openai install
+
+            self._client = openai.OpenAI(max_retries=0)
+        return self._client
+
+    def _cache_path(self, key: str) -> Path:
+        return self.cache_dir / f"{key}.json"
+
+    def _read_cache(self, key: str) -> JsonObj | None:
+        try:
+            return json.loads(self._cache_path(key).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    def _write_cache(self, key: str, payload: JsonObj) -> None:
+        try:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            self._cache_path(key).write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+        except OSError as exc:
+            log.warning("llm cache write failed: %s", exc)
+
+    def _api_call(self, *, messages: list[JsonObj], tools: list[JsonObj], tool_choice: Any) -> Any:
+        import openai
+        from tenacity import (
+            retry,
+            retry_if_exception,
+            stop_after_attempt,
+            wait_exponential,
+        )
+
+        def _retryable(exc: BaseException) -> bool:
+            if isinstance(
+                exc,
+                (openai.APIConnectionError, openai.APITimeoutError, openai.RateLimitError),
+            ):
+                return True
+            if isinstance(exc, openai.APIStatusError):
+                return exc.status_code >= 500
+            return False
+
+        @retry(
+            retry=retry_if_exception(_retryable),
+            stop=stop_after_attempt(config.LLM_MAX_ATTEMPTS),
+            wait=wait_exponential(
+                multiplier=config.LLM_RETRY_INITIAL_SECONDS, max=config.LLM_RETRY_MAX_SECONDS
+            ),
+            reraise=True,
+        )
+        def _do() -> Any:
+            return self.client.chat.completions.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                messages=messages,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+
+        return _do()
+
+    @staticmethod
+    def _usage(resp: Any) -> tuple[int, int]:
+        usage = getattr(resp, "usage", None)
+        return (
+            int(getattr(usage, "prompt_tokens", 0) or 0),
+            int(getattr(usage, "completion_tokens", 0) or 0),
+        )
+
+    def call_tool(
+        self, *, system: str, user: str, tool: Tool, model: str | None = None
+    ) -> LLMResult:
+        if model is not None:
+            raise ValueError("set the model on the OpenAILLM instance, not per call")
+        tool_name = str(tool["name"])
+        key = cache_key(self.model, system, user, [tool])
+
+        cached = self._read_cache(key)
+        if cached is not None:
+            log.info("llm cache hit model=%s tool=%s key=%s", self.model, tool_name, key[:12])
+            return LLMResult(
+                data=cached["data"],
+                model=cached.get("model", self.model),
+                tool=tool_name,
+                input_tokens=cached.get("input_tokens", 0),
+                output_tokens=cached.get("output_tokens", 0),
+                latency_s=0.0,
+                cached=True,
+            )
+
+        start = time.monotonic()
+        resp = self._api_call(
+            messages=_messages_to_openai(system, [{"role": "user", "content": user}]),
+            tools=[_tool_to_openai(tool)],
+            tool_choice={"type": "function", "function": {"name": tool_name}},
+        )
+        latency = time.monotonic() - start
+
+        message = resp.choices[0].message
+        data: JsonObj | None = None
+        for call in message.tool_calls or []:
+            if call.function.name == tool_name:
+                data = _loads_args(call.function.arguments)
+                break
+        if data is None:
+            raise LLMError(f"model returned no '{tool_name}' tool call")
+
+        in_tok, out_tok = self._usage(resp)
+        log.info(
+            "llm call model=%s tool=%s in=%d out=%d latency=%.3fs key=%s",
+            self.model,
+            tool_name,
+            in_tok,
+            out_tok,
+            latency,
+            key[:12],
+        )
+        self._write_cache(
+            key,
+            {
+                "data": data,
+                "model": self.model,
+                "tool": tool_name,
+                "input_tokens": in_tok,
+                "output_tokens": out_tok,
+            },
+        )
+        return LLMResult(
+            data=data,
+            model=self.model,
+            tool=tool_name,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            latency_s=latency,
+            cached=False,
+        )
+
+    def run_turn(
+        self,
+        *,
+        system: str,
+        messages: list[JsonObj],
+        tools: Sequence[Tool],
+        tool_choice: ToolChoice = "auto",
+    ) -> LLMTurn:
+        start = time.monotonic()
+        resp = self._api_call(
+            messages=_messages_to_openai(system, list(messages)),
+            tools=[_tool_to_openai(t) for t in tools],
+            tool_choice=_tool_choice_to_openai(tool_choice),
+        )
+        latency = time.monotonic() - start
+
+        message = resp.choices[0].message
+        tool_calls: list[ToolCall] = []
+        assistant_content: list[Any] = []
+        if message.content:
+            assistant_content.append({"type": "text", "text": message.content})
+        for call in message.tool_calls or []:
+            inp = _loads_args(call.function.arguments)
+            tool_calls.append(ToolCall(id=call.id, name=call.function.name, input=inp))
+            assistant_content.append(
+                {"type": "tool_use", "id": call.id, "name": call.function.name, "input": inp}
+            )
+        in_tok, out_tok = self._usage(resp)
+        log.info(
+            "llm turn model=%s tools=%d calls=%d in=%d out=%d latency=%.3fs",
+            self.model,
+            len(tools),
+            len(tool_calls),
+            in_tok,
+            out_tok,
+            latency,
+        )
+        return LLMTurn(
+            tool_calls=tool_calls,
+            assistant_content=assistant_content,
+            text=message.content or "",
+            stop_reason="tool_use" if tool_calls else "end_turn",
+            model=self.model,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            latency_s=latency,
+            cached=False,
+        )
+
+
+def have_credentials() -> bool:
+    """True if any supported model credential is set in the environment."""
+    import os
+
+    return bool(
+        os.environ.get("ANTHROPIC_API_KEY")
+        or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        or os.environ.get("OPENAI_API_KEY")
+    )
+
+
+def build_default_llm() -> LLM:
+    """Pick the backend. Claude is the default; GPT-4o-mini is opt-in.
+
+    SCAMGUARD_LLM=openai|anthropic forces a choice. Otherwise, if OPENAI_API_KEY is set
+    and no Anthropic key is, use OpenAI; else use Anthropic.
+    """
+    import os
+
+    choice = os.environ.get("SCAMGUARD_LLM", "").strip().lower()
+    if choice == "openai":
+        return OpenAILLM()
+    if choice == "anthropic":
+        return AnthropicLLM()
+    has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+    has_anthropic = bool(
+        os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    )
+    if has_openai and not has_anthropic:
+        return OpenAILLM()
+    return AnthropicLLM()
+
+
+# ---------------------------------------------------------------------------
 # Deterministic fake for tests and CI (never touches the network)
 # ---------------------------------------------------------------------------
 

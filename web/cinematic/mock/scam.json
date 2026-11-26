@@ -1,0 +1,22 @@
+{
+  "_scenario": "success",
+  "_label": "mock data",
+  "_message": "Aap ka account 24 ghante mein band ho jayega. 6 digit code abhi bhejein: http://verify-acc0unt.xyz/login",
+  "decision": "scam",
+  "score": 0.95,
+  "advice": "Yeh code kisi ko na dein. Link par click na karein. Message ko block karein.",
+  "action_ids": ["do_not_click", "verify_official"],
+  "cues": ["24 ghante mein band ho jayega", "6 digit code abhi bhejein"],
+  "reason": "",
+  "trace": [
+    { "step": 1, "name": "message_in", "status": "ok", "detail": "" },
+    { "step": 2, "name": "ocr", "status": "skipped", "detail": "" },
+    { "step": 3, "name": "sanitize", "status": "ok", "detail": "removed=0 markers=0" },
+    { "step": 4, "name": "extract", "status": "ok", "detail": "urls=1 phones=0" },
+    { "step": 5, "name": "verify", "status": "ok", "detail": "tool_score=0.90 flags=['lookalike']" },
+    { "step": 6, "name": "detect", "status": "ok", "detail": "verdict=scam score=0.90" },
+    { "step": 7, "name": "guards", "status": "ok", "detail": "verdict=scam score=0.95" },
+    { "step": 8, "name": "gate", "status": "ok", "detail": "verdict=scam released=False" },
+    { "step": 9, "name": "advise", "status": "ok", "detail": "ids=['do_not_click', 'verify_official']" }
+  ]
+}

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scam Guard — Case File</title>
+    <meta name="description" content="A forensic scam check. You hand over the evidence; the detective reads it. Nothing you send is stored." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- cosmetic layers (decorative only) -->
+    <div class="grain" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="letterbox lb-top" aria-hidden="true"></div>
+    <div class="letterbox lb-bottom" aria-hidden="true"></div>
+
+    <!-- safety: verdict + advice announced here the instant data arrives, never delayed -->
+    <div id="announce" class="sr-only" role="status" aria-live="assertive"></div>
+
+    <!-- cold open -->
+    <div id="intro" class="intro">
+      <!-- beige evidence note, top-left (decorative prop) -->
+      <article class="intro-note" aria-hidden="true">
+        <p class="exhibit-h">Exhibit A · Forwarded message</p>
+        <p class="intro-note-body">Aap ka account <span class="hl-static">band ho jayega</span>. 6 digit code <span class="hl-static">abhi bhejein</span>…</p>
+      </article>
+
+      <div class="intro-inner">
+        <h1 class="title-card"><span class="t-scam">SCAM</span> <span class="t-guard">GUARD</span></h1>
+        <p class="tagline" dir="auto">Saboot dijiye. Baaqi tehqeeq hamari.</p>
+        <button id="skip-intro" class="btn-ghost" type="button">Skip intro</button>
+      </div>
+    </div>
+
+    <main id="stage" class="stage" hidden>
+      <div class="wrap">
+        <header class="masthead">
+          <span class="brand"><span class="sweep">SCAM GUARD</span></span>
+          <span id="case-meta" class="case-meta">CASE FILE 0000 · STANDBY</span>
+        </header>
+
+        <!-- evidence tray -->
+        <form id="form" class="tray" autocomplete="off">
+          <div class="tray-grid">
+            <div>
+              <label class="lbl" for="text">Evidence — paste the message</label>
+              <textarea id="text" name="text" dir="auto" spellcheck="false"
+                placeholder="Paste the forwarded message here…"></textarea>
+            </div>
+            <div class="tray-side">
+              <label class="lbl" for="image">Or a screenshot</label>
+              <input id="image" name="image" type="file" accept="image/*" />
+              <label class="lbl" for="session_id">Case id <span class="muted">(optional)</span></label>
+              <input id="session_id" name="session_id" type="text" dir="auto" placeholder="e.g. case-01" />
+              <div class="tray-actions">
+                <button id="submit" class="btn-primary" type="submit">Hand over evidence</button>
+                <button id="reset" class="btn-ghost" type="button">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div class="presenter">
+            <span class="presenter-lbl">Presenter</span>
+            <button class="scenario" type="button" data-scenario="scam"><kbd>1</kbd> Success</button>
+            <button class="scenario" type="button" data-scenario="blurry"><kbd>2</kbd> Blurry screenshot</button>
+            <button class="scenario" type="button" data-scenario="injection"><kbd>3</kbd> Injection attempt</button>
+          </div>
+        </form>
+
+        <!-- the case: exhibit + verdict, two columns on wide screens -->
+        <section id="case" class="case" hidden>
+          <div class="case-grid">
+            <div class="col-left">
+              <article class="exhibit">
+                <p class="exhibit-h">Exhibit A · Forwarded message</p>
+                <pre id="evidence" class="evidence" dir="auto" tabindex="0"></pre>
+              </article>
+              <p class="inert-note">URLs are shown as plain text only — they are never opened.</p>
+
+              <h2 id="cues-head" class="section-h">Quoted cues</h2>
+              <p id="cue-tags" class="cue-tags" dir="auto"></p>
+            </div>
+
+            <div class="col-right">
+              <p class="kicker">The verdict</p>
+              <p id="v-state" class="v-state"></p>
+              <p id="v-score" class="v-score"></p>
+              <hr class="rule" />
+              <div id="advice" class="credits" dir="auto"></div>
+            </div>
+          </div>
+
+          <!-- nine-step film strip -->
+          <ol id="strip" class="strip" aria-label="The nine pipeline steps"></ol>
+          <p class="legend"><span class="g-model">◉</span> Model decides&nbsp;&nbsp;·&nbsp;&nbsp;<span class="g-code">□</span> Code decides</p>
+        </section>
+
+        <div id="error" class="error" hidden role="alert"></div>
+
+        <footer class="colophon">
+          Message content is never logged or stored. This page only displays the API's result.
+        </footer>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
