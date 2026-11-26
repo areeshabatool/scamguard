@@ -16,9 +16,16 @@ from pathlib import Path
 from statistics import fmean
 
 from eval import metrics
-from eval.common import BOOTSTRAP_SEED, RESULTS_DIR, SAMPLES_DIR, dry_fake, git_commit, read_jsonl
+from eval.common import (
+    BOOTSTRAP_SEED,
+    RESULTS_DIR,
+    SAMPLES_DIR,
+    display_path,
+    dry_fake,
+    git_commit,
+    read_jsonl,
+)
 from eval.systems import B0, B1, B2, B3
-from scamguard import config
 
 DEFAULT_DATASET = SAMPLES_DIR / "eval.jsonl"
 read_dataset = read_jsonl
@@ -88,7 +95,7 @@ def run(*, dry_run: bool, dataset_path: Path, n_resamples: int) -> dict:
         "dry_run": dry_run,
         "seeds": {"bootstrap": BOOTSTRAP_SEED},
         "dataset": {
-            "path": str(dataset_path.relative_to(config.REPO_ROOT)),
+            "path": display_path(dataset_path),
             "n": len(dataset),
             "n_scam": sum(t == "scam" for t in y_true),
             "n_benign": sum(t == "benign" for t in y_true),
