@@ -178,11 +178,18 @@ def _is_lookalike(host: str, official: frozenset[str]) -> bool:
 
 def classify_url(url: str, official: frozenset[str]) -> UrlFinding:
     """Parse one URL and flag structural tricks. Never fetches anything."""
-    parsed = urlsplit(url if "://" in url else f"http://{url}")
-    host = (parsed.hostname or "").lower().rstrip(".")
-    flags: list[str] = []
+    try:
+        parsed = urlsplit(url if "://" in url else f"http://{url}")
+        host = (parsed.hostname or "").lower().rstrip(".")
+        has_userinfo = parsed.username is not None
+    except ValueError:
+        # A malformed URL (e.g. stray brackets the message contained, which newer
+        # urllib reads as a bad IPv6 host) is unparseable. Treat it as having no host
+        # rather than letting it crash the pipeline (invariant: fail safe, never crash).
+        return _finish(url, None, None, False, [])
 
-    if parsed.username is not None:
+    flags: list[str] = []
+    if has_userinfo:
         flags.append(FLAG_USERINFO)
 
     if not host:

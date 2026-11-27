@@ -132,6 +132,15 @@ def test_userinfo_trick_is_flagged() -> None:
     assert finding.score == pytest.approx(0.9)
 
 
+def test_malformed_bracket_url_does_not_crash() -> None:
+    # A stray bracket makes newer urllib read a bad IPv6 host and raise; the verifier
+    # must treat it as unparseable, never crash (it fed a message's "[PLATFORM]" text).
+    for bad in ("[PLATFORM].com/login", "http://[BANK]/verify", "http://a[b].com"):
+        finding = classify_url(bad, OFFICIAL)
+        assert finding.official is False
+        assert finding.score == pytest.approx(0.0)
+
+
 # ---------- scoring and extraction ----------
 
 
