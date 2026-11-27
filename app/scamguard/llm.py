@@ -663,10 +663,42 @@ class OpenAILLM:
         )
 
 
-def have_credentials() -> bool:
-    """True if any supported model credential is set in the environment."""
+_DOTENV_LOADED = False
+
+
+def _load_dotenv_once() -> None:
+    """Load KEY=VALUE lines from a repo-root .env into os.environ (shell wins).
+
+    Dependency-free. Only fills variables not already set. Disabled when
+    SCAMGUARD_DISABLE_DOTENV is set (the test suite sets it, so a local .env never
+    leaks into tests).
+    """
+    global _DOTENV_LOADED
     import os
 
+    if _DOTENV_LOADED or os.environ.get("SCAMGUARD_DISABLE_DOTENV"):
+        return
+    _DOTENV_LOADED = True
+    try:
+        text = (config.REPO_ROOT / ".env").read_text(encoding="utf-8")
+    except OSError:
+        return
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        val = val.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
+def have_credentials() -> bool:
+    """True if any supported model credential is set (reads .env too)."""
+    import os
+
+    _load_dotenv_once()
     return bool(
         os.environ.get("ANTHROPIC_API_KEY")
         or os.environ.get("ANTHROPIC_AUTH_TOKEN")
@@ -674,26 +706,45 @@ def have_credentials() -> bool:
     )
 
 
-def build_default_llm() -> LLM:
-    """Pick the backend. Claude is the default; GPT-4o-mini is opt-in.
-
-    SCAMGUARD_LLM=openai|anthropic forces a choice. Otherwise, if OPENAI_API_KEY is set
-    and no Anthropic key is, use OpenAI; else use Anthropic.
-    """
+def _use_openai() -> bool:
+    """Whether the OpenAI backend is active (reads SCAMGUARD_LLM and the keys / .env)."""
     import os
 
+    _load_dotenv_once()
     choice = os.environ.get("SCAMGUARD_LLM", "").strip().lower()
     if choice == "openai":
-        return OpenAILLM()
+        return True
     if choice == "anthropic":
-        return AnthropicLLM()
+        return False
     has_openai = bool(os.environ.get("OPENAI_API_KEY"))
     has_anthropic = bool(
         os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
     )
-    if has_openai and not has_anthropic:
-        return OpenAILLM()
-    return AnthropicLLM()
+    return has_openai and not has_anthropic
+
+
+def active_backend() -> str:
+    """'openai' or 'anthropic' — the backend build_default_llm would pick."""
+    return "openai" if _use_openai() else "anthropic"
+
+
+def default_model_name() -> str:
+    """The model name the active backend uses by default (for report labels)."""
+    return config.OPENAI_MODEL if _use_openai() else config.MODEL
+
+
+def build_default_llm(model: str | None = None) -> LLM:
+    """Pick the backend. Claude is the default; GPT-4o-mini is opt-in.
+
+    SCAMGUARD_LLM=openai|anthropic forces a choice; otherwise OpenAI is used when
+    OPENAI_API_KEY is set and no Anthropic key is. A Claude model name passed while the
+    OpenAI backend is active is ignored (the OpenAI default model is used instead).
+    """
+    if _use_openai():
+        if model is not None and not model.startswith("gpt"):
+            model = None
+        return OpenAILLM(model=model)
+    return AnthropicLLM(model=model)
 
 
 # ---------------------------------------------------------------------------

@@ -66,9 +66,9 @@ def run(*, dry_run: bool, dataset_path: Path, n_resamples: int) -> dict:
     if dry_run:
         factory: object = _dry_fake
     else:
-        from scamguard.llm import AnthropicLLM
+        from scamguard.llm import build_default_llm
 
-        shared = AnthropicLLM()
+        shared = build_default_llm()  # Claude by default, OpenAI if selected
         factory = lambda: shared  # noqa: E731 - share one client so the disk cache is reused
 
     systems = [B0(), B1(factory), B2(factory), B3(factory)]
