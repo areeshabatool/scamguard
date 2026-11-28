@@ -41,8 +41,30 @@ def _get_llm() -> LLM:
     return llm
 
 
+def _ocr_engine():
+    """The OCR engine to use. An explicit app.state.ocr_engine (even None) is honoured;
+    otherwise Tesseract is auto-enabled when it is installed, else None (images stay unsure).
+    """
+    if hasattr(app.state, "ocr_engine"):
+        return app.state.ocr_engine
+    from scamguard.ocr import tesseract_available, tesseract_engine
+
+    return tesseract_engine if tesseract_available() else None
+
+
 def _calibration() -> list[float]:
-    return list(getattr(app.state, "calibration_scores", []))
+    """Calibration scores for the gate: an explicit app.state override, else the file."""
+    override = getattr(app.state, "calibration_scores", None)
+    if override is not None:
+        return list(override)
+    try:
+        import json
+
+        data = json.loads(config.CALIBRATION_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    scores = data.get("scores", data) if isinstance(data, dict) else data
+    return [float(s) for s in scores] if isinstance(scores, list) else []
 
 
 @app.get("/health")
@@ -74,18 +96,28 @@ async def analyze_endpoint(
     ocr_result: OCRResult | None = None
     if has_image:
         data = await image.read()  # read into memory, never stored
-        engine = getattr(app.state, "ocr_engine", None)
-        # No OCR engine configured -> a zero-confidence read -> "unsure, send clearer input".
-        ocr_result = engine(data) if engine is not None else OCRResult(text="", confidence=0.0)
+        engine = _ocr_engine()
+        if engine is not None:
+            ocr_result = engine(data)
+        elif not has_text:
+            # No OCR engine and no typed text: an unreadable image -> "send a clearer input".
+            ocr_result = OCRResult(text="", confidence=0.0)
+        # else: image present but no OCR engine and text was typed -> analyze the typed text
+        # rather than discarding it (don't let an unreadable attachment hide a real message).
 
-    # When an image is present we use its OCR text; otherwise the typed text.
+    # Use the image's OCR text when we have an OCR result; otherwise the typed text.
     text_in = None if ocr_result is not None else text
 
     if session_id:
         session = _sessions.setdefault(session_id, Session(llm, calibration_scores=_calibration()))
-        return session.analyze(text_in, ocr=ocr_result)
+        result = session.analyze(text_in, ocr=ocr_result)
+    else:
+        result = analyze(text_in, ocr=ocr_result, llm=llm, calibration_scores=_calibration())
 
-    return analyze(text_in, ocr=ocr_result, llm=llm, calibration_scores=_calibration())
+    # Echo the transcribed screenshot text back to the UI for display (not stored).
+    if ocr_result is not None and ocr_result.text.strip():
+        result = result.model_copy(update={"transcript": ocr_result.text})
+    return result
 
 
 # Serve the cinematic front end (static files only) at /cinematic. Display-only: it calls

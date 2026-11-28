@@ -71,6 +71,14 @@ def test_tesseract_engine_uses_pytesseract(monkeypatch) -> None:
     fake.image_to_data = image_to_data
     monkeypatch.setitem(sys.modules, "pytesseract", fake)
 
-    result = ocr.tesseract_engine(b"image-bytes")
+    # Raw image bytes (as the web API passes) are opened with Pillow before OCR.
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (4, 4), "white").save(buf, "PNG")
+
+    result = ocr.tesseract_engine(buf.getvalue())
     assert result.text == "Send OTP now"  # blank word dropped
     assert result.confidence == (90.0 + 85.0 + 95.0) / 3 / 100  # -1 ignored

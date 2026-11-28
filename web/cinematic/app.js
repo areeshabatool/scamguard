@@ -94,7 +94,8 @@
     const token = ++runToken;
     const stateKey = deriveState(result);
     const info = STATE[stateKey];
-    const message = ctx.message || "";
+    // Prefer the typed text; otherwise show the screenshot's transcribed (OCR) text.
+    const message = ctx.message || result.transcript || "[screenshot — no readable text found]";
 
     // SAFETY FIRST: announce verdict + advice immediately, before any animation.
     announce.textContent = "Verdict: " + info.word + ". Advice: " + (result.advice || "");
@@ -265,7 +266,7 @@
         if (!r.ok) return r.json().then((j) => Promise.reject(j.detail || "Request failed")).catch(() => Promise.reject("Request failed (" + r.status + ")"));
         return r.json();
       })
-      .then((result) => runCase(result, { mode: "live", message: textVal || "[screenshot submitted — text not shown]" }))
+      .then((result) => runCase(result, { mode: "live", message: textVal }))
       .catch(() => {
         fetch("mock/scam.json", { cache: "no-store" })
           .then((r) => r.json())
