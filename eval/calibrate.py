@@ -21,6 +21,7 @@ from pathlib import Path
 
 from eval.common import LLMFactory, dry_fake, git_commit, live_factory, read_jsonl, require_fields
 from scamguard import config, pipeline
+from scamguard.llm import default_model_name
 
 FIELDS = ("id", "text", "label")
 
@@ -55,8 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     report = run(
         dataset_path=dataset,
-        model="fake-model" if args.dry_run else config.MODEL,
-        factory=dry_fake if args.dry_run else live_factory(config.MODEL),
+        model="fake-model" if args.dry_run else default_model_name(),
+        factory=dry_fake if args.dry_run else live_factory(default_model_name()),
     )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,71 @@
+{
+  "experiment": "E4",
+  "commit": "49780ea082c5e4a2ead56fa16d1bf4cf95da8224",
+  "dry_run": false,
+  "model": "gpt-4o-mini",
+  "seeds": {
+    "bootstrap": 1234
+  },
+  "dataset": {
+    "path": "data\\private\\pairs.jsonl",
+    "n_items": 60,
+    "n_pairs": 30,
+    "n_benign_pairs": 15,
+    "n_scam_pairs": 15
+  },
+  "gate": {
+    "alpha": 0.05,
+    "n_calibration": 69,
+    "threshold": 0.5,
+    "shared_across_languages": true
+  },
+  "paired_fpr_difference": {
+    "definition": "mean over benign pairs of flagged(roman_urdu) - flagged(en)",
+    "value": 0.06666666666666667,
+    "ci": [
+      -0.13333333333333333,
+      0.26666666666666666
+    ],
+    "n": 15
+  },
+  "by_language": {
+    "en": {
+      "recall": {
+        "value": 1.0,
+        "ci": [
+          1.0,
+          1.0
+        ],
+        "n": 15
+      },
+      "fpr": {
+        "value": 0.26666666666666666,
+        "ci": [
+          0.06666666666666667,
+          0.5333333333333333
+        ],
+        "n": 15
+      },
+      "abstain_rate": 0.0
+    },
+    "roman_urdu": {
+      "recall": {
+        "value": 1.0,
+        "ci": [
+          1.0,
+          1.0
+        ],
+        "n": 15
+      },
+      "fpr": {
+        "value": 0.3333333333333333,
+        "ci": [
+          0.13333333333333333,
+          0.6
+        ],
+        "n": 15
+      },
+      "abstain_rate": 0.0
+    }
+  }
+}

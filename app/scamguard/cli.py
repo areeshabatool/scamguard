@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 
 from scamguard import config
@@ -45,8 +44,9 @@ _DEMO_SCENARIOS = [
 ]
 
 _NO_KEY_MESSAGE = (
-    "error: no Anthropic credentials found. Copy .env.example to .env and set "
-    "ANTHROPIC_API_KEY (or export it), then retry. Tests and the eval --dry-run need no key."
+    "error: no model credentials found. Set ANTHROPIC_API_KEY (Claude, the default) or "
+    "OPENAI_API_KEY (GPT-4o-mini) in your shell, then retry. "
+    "Tests and the eval --dry-run need no key."
 )
 
 
@@ -61,9 +61,9 @@ def _load_calibration() -> list[float]:
 
 
 def _build_llm() -> LLM:
-    from scamguard.llm import AnthropicLLM
+    from scamguard.llm import build_default_llm
 
-    return AnthropicLLM()
+    return build_default_llm()
 
 
 def main(argv: list[str] | None = None, *, llm: LLM | None = None) -> int:
@@ -75,9 +75,9 @@ def main(argv: list[str] | None = None, *, llm: LLM | None = None) -> int:
     sub.add_parser("demo", help="run the success / blurry-input / injection scenarios")
     args = parser.parse_args(argv)
 
-    if llm is None and not (
-        os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
-    ):
+    from scamguard.llm import have_credentials
+
+    if llm is None and not have_credentials():
         print(_NO_KEY_MESSAGE, file=sys.stderr)
         return 1
     client = llm if llm is not None else _build_llm()

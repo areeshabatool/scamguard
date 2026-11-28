@@ -36,16 +36,25 @@ hypothesis).
 | Variable            | Required for                               | Notes                                  |
 | ------------------- | ------------------------------------------ | -------------------------------------- |
 | `ANTHROPIC_API_KEY` | live model calls (CLI, web `/analyze`, live eval) | Not needed for tests or `--dry-run`. |
+| `OPENAI_API_KEY`    | live model calls using the optional GPT-4o-mini backend | Only if you opt into OpenAI (see below). |
+| `SCAMGUARD_LLM`     | forcing a backend: `anthropic` or `openai` | Optional; auto-selected otherwise.     |
 
-Copy the template and fill in your key locally (never commit `.env`):
+Set the key in your shell (the code reads the environment variable directly):
 
 ```bash
-cp .env.example .env        # Windows: copy .env.example .env
-# then edit .env:  ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=sk-ant-...        # Windows PowerShell: $env:ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 The model name, thresholds and the conformal `alpha` live in
 [`app/scamguard/config.py`](app/scamguard/config.py), not in environment variables.
+
+### Model backend (Claude by default; GPT-4o-mini optional)
+
+Claude is the default and all model calls go through [`llm.py`](app/scamguard/llm.py).
+An optional **OpenAI (GPT-4o-mini)** adapter is included for local testing — it implements
+the same interface, so the pipeline, guards, gate and tests are unchanged. It is **opt-in**:
+set `OPENAI_API_KEY` (and no Anthropic key) and it is selected automatically, or force it
+with `SCAMGUARD_LLM=openai`. Needs `openai` installed (it is in `requirements.txt`).
 
 ## Running the tests
 
@@ -85,6 +94,11 @@ screenshot:
 ```bash
 uvicorn scamguard.api:app --reload
 ```
+
+Two front ends are served: the plain upload page at `/`, and a cinematic "case file"
+walkthrough at `/cinematic/` (with a presenter mode — keys `1`/`2`/`3` — that replays
+recorded demos with **no key**). Both are display-only: they never alter a verdict and
+never fetch a URL found in a message.
 
 `GET /health` and the upload page need no key; `POST /analyze` makes a live model call.
 Screenshot OCR is pluggable (no engine is bundled); an optional Tesseract adapter is in

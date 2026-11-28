@@ -18,6 +18,11 @@ OFFICIAL_DOMAINS_PATH = DATA_DIR / "official_domains.json"
 MODEL = "claude-opus-4-8"
 MAX_TOKENS = 1024
 
+# --- Optional OpenAI backend (opt-in; Claude above stays the default) ---
+# Used only when SCAMGUARD_LLM=openai, or when OPENAI_API_KEY is set and no Anthropic key
+# is. GPT-4o-mini accepts forced tool calls, so the structured-output contract is preserved.
+OPENAI_MODEL = "gpt-4o-mini"
+
 # --- llm.py behavior ---
 # Retries are owned by tenacity in llm.py (the SDK client is created with max_retries=0).
 LLM_MAX_ATTEMPTS = 4

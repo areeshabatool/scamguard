@@ -93,10 +93,14 @@ def dry_fake() -> LLM:
 
 
 def live_factory(model: str) -> LLMFactory:
-    """One shared AnthropicLLM per model so its disk cache is reused across calls."""
-    from scamguard.llm import AnthropicLLM
+    """One shared client per model so its disk cache is reused across calls.
 
-    shared = AnthropicLLM(model=model)
+    Routes through build_default_llm, so the OpenAI backend is used when selected (a
+    Claude model name is then ignored in favour of the OpenAI default model).
+    """
+    from scamguard.llm import build_default_llm
+
+    shared = build_default_llm(model)
     return lambda: shared
 
 

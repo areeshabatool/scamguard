@@ -127,3 +127,6 @@ class CaseResult(_Strict):
     cues: list[str] = Field(default_factory=list)
     reason: str = ""
     trace: list[StepTrace] = Field(default_factory=list)
+    # The text that was analysed, echoed back for display only (e.g. OCR output of an
+    # uploaded screenshot). Not populated by the pipeline; set by the API for the UI.
+    transcript: str = ""

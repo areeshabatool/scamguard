@@ -47,6 +47,7 @@ from eval.common import (
 )
 from eval.systems import B3
 from scamguard import config, gate
+from scamguard.llm import default_model_name
 
 FIELDS = ("id", "pair_id", "lang", "label", "text")
 LANGS = ("en", "roman_urdu")
@@ -172,8 +173,8 @@ def main(argv: list[str] | None = None) -> int:
     dataset = args.dataset or (DRY_DATASET if args.dry_run else config.E4_DATASET)
     report, raw = run(
         dataset_path=dataset,
-        model="fake-model" if args.dry_run else config.MODEL,
-        factory=dry_fake if args.dry_run else live_factory(config.MODEL),
+        model="fake-model" if args.dry_run else default_model_name(),
+        factory=dry_fake if args.dry_run else live_factory(default_model_name()),
         calibration=load_calibration(),
         n_resamples=args.resamples,
         dry_run=args.dry_run,

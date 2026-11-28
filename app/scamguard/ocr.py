@@ -39,16 +39,65 @@ def average_confidence(word_confidences: Sequence[float]) -> float:
     return min(max(sum(usable) / len(usable) / 100.0, 0.0), 1.0)
 
 
+def _locate_tesseract() -> str | None:
+    """Find the tesseract binary on PATH or in the usual Windows install locations."""
+    import os
+    import shutil
+
+    exe = shutil.which("tesseract")
+    if exe:
+        return exe
+    for path in (
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    ):
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def tesseract_available() -> bool:
+    """True if pytesseract is importable and the tesseract binary can be found."""
+    try:
+        import pytesseract
+    except ImportError:
+        return False
+    exe = _locate_tesseract()
+    if exe is None:
+        return False
+    pytesseract.pytesseract.tesseract_cmd = exe
+    return True
+
+
 def tesseract_engine(image: Any, *, lang: str = "eng+urd") -> OCRResult:
     """Optional adapter: transcribe with pytesseract (requires the tesseract binary).
 
-    Install `pytesseract` and `pillow` and the system `tesseract` binary, then pass this as
-    the engine, e.g. `api.app.state.ocr_engine = tesseract_engine`. Imported lazily so the
-    package has no hard OCR dependency.
+    Accepts a PIL image or raw image bytes (the web API passes bytes). Falls back to
+    English if a requested language pack is missing (English also reads Roman Urdu, which
+    is Latin script). Imported lazily so the package has no hard OCR dependency.
     """
     import pytesseract  # optional, not in requirements.txt
 
-    data = pytesseract.image_to_data(image, lang=lang, output_type=pytesseract.Output.DICT)
+    exe = _locate_tesseract()
+    if exe:
+        try:
+            pytesseract.pytesseract.tesseract_cmd = exe
+        except AttributeError:
+            pass  # a mock pytesseract (tests) may not expose .pytesseract.tesseract_cmd
+
+    if isinstance(image, (bytes, bytearray)):
+        import io
+
+        from PIL import Image
+
+        image = Image.open(io.BytesIO(image))
+
+    try:
+        data = pytesseract.image_to_data(image, lang=lang, output_type=pytesseract.Output.DICT)
+    except pytesseract.TesseractError:
+        # A requested language pack (e.g. urd) may not be installed; English still works.
+        data = pytesseract.image_to_data(image, lang="eng", output_type=pytesseract.Output.DICT)
+
     words = [w for w in data.get("text", []) if w and w.strip()]
     confs = [float(c) for c in data.get("conf", [])]
     return OCRResult(text=" ".join(words), confidence=average_confidence(confs))

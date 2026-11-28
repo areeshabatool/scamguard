@@ -48,6 +48,7 @@ from eval.common import (
     write_report,
 )
 from scamguard import config, gate, pipeline
+from scamguard.llm import default_model_name
 from scamguard.schemas import CaseResult
 
 FIELDS = ("id", "text", "label")
@@ -291,8 +292,8 @@ def main(argv: list[str] | None = None) -> int:
     cache = common.RAW_DIR / ("e3_dryrun_scores.jsonl" if args.dry_run else "e3_scores.jsonl")
     report = run(
         dataset_path=dataset,
-        model="fake-model" if args.dry_run else config.MODEL,
-        factory=dry_fake if args.dry_run else live_factory(config.MODEL),
+        model="fake-model" if args.dry_run else default_model_name(),
+        factory=dry_fake if args.dry_run else live_factory(default_model_name()),
         cache_path=cache,
         refresh=args.refresh,
         n_splits=args.splits,

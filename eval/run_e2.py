@@ -49,6 +49,7 @@ from eval.common import (
 )
 from eval.systems import B1, B2, B3
 from scamguard import config, gate
+from scamguard.llm import active_backend
 
 FIELDS = ("id", "category", "base", "attack")
 DRY_DATASET = SAMPLES_DIR / "injection.jsonl"
@@ -160,9 +161,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     dataset = args.dataset or (DRY_DATASET if args.dry_run else config.E2_DATASET)
+    if args.dry_run:
+        live_models: tuple[str, ...] = ("fake-model",)
+    elif active_backend() == "openai":
+        live_models = (config.OPENAI_MODEL,)  # OpenAI backend: one gpt-4o-mini row
+    else:
+        live_models = config.EVAL_MODELS
     report, raw = run(
         dataset_path=dataset,
-        models=("fake-model",) if args.dry_run else config.EVAL_MODELS,
+        models=live_models,
         factory_for=(lambda _m: dry_fake) if args.dry_run else live_factory,
         calibration=load_calibration(),
         n_resamples=args.resamples,

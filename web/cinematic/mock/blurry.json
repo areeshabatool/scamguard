@@ -1,0 +1,15 @@
+{
+  "_scenario": "blurry screenshot",
+  "_label": "recorded demo",
+  "_message": "[uploaded screenshot — text too blurry to read]",
+  "decision": "unsure",
+  "score": 0.0,
+  "advice": "Message ya tasveer saaf nahi hai. Barah-e-karam saaf image ya text bhejein.",
+  "action_ids": [],
+  "cues": [],
+  "reason": "need_clearer_input",
+  "trace": [
+    { "step": 1, "name": "message_in", "status": "ok", "detail": "" },
+    { "step": 2, "name": "ocr", "status": "error", "detail": "low confidence 0.20" }
+  ]
+}
